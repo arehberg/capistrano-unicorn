@@ -12,21 +12,21 @@ namespace :load do
     set :unicorn_env     , Proc.new{ fetch(:rails_env, 'production') }
     # Following recommendations from http://unicorn.bogomips.org/unicorn_1.html
     set :unicorn_rack_env, Proc.new{ fetch(:rails_env) == 'development' ? 'development' : 'deployment' }
-    
+
     # Execution
     set :unicorn_user              , nil
     set :unicorn_bundle            , Proc.new{ fetch(:bundle_cmd, "bundle") }
     set :unicorn_bin               , "unicorn"
     set :unicorn_options           , ''
     set :unicorn_restart_sleep_time, 2
-    
+
     # Relative paths
     set :app_subdir                        , ''
     set :unicorn_config_rel_path           , "config"
     set :unicorn_config_filename           , "unicorn.rb"
     set :unicorn_config_rel_file_path      , Proc.new{ File.join(fetch(:unicorn_config_rel_path), fetch(:unicorn_config_filename)) }
     set :unicorn_config_stage_rel_file_path, Proc.new{ File.join(fetch(:unicorn_config_rel_path), 'unicorn', "#{fetch(:unicorn_env)}.rb") }
-    
+
     # Absolute paths
     # If you find the following confusing, try running 'cap unicorn:show_vars' -
     # it might help :-)
@@ -37,14 +37,20 @@ namespace :load do
     set :unicorn_config_stage_file_path, Proc.new{ File.join(fetch(:app_path), fetch(:unicorn_config_stage_rel_file_path)) }
     set :unicorn_default_pid           , Proc.new{ File.join(fetch(:app_path), 'tmp', 'pids', 'unicorn.pid') }
     set :unicorn_pid, Proc.new{
-      extracted_pid = extract_pid_file
-      if extracted_pid
-        extracted_pid
+      pid = fetch :unicorn_pid
+
+      if pid
+        pid
       else
-        # TODO logger is not defined
-        #logger.important "err :: failed to auto-detect pid from #{local_unicorn_config}"
-        #logger.important "err :: falling back to default: #{unicorn_default_pid}"
-        fetch :unicorn_default_pid
+        extracted_pid = extract_pid_file
+        if extracted_pid
+          extracted_pid
+        else
+          # TODO logger is not defined
+          #logger.important "err :: failed to auto-detect pid from #{local_unicorn_config}"
+          #logger.important "err :: falling back to default: #{unicorn_default_pid}"
+          fetch :unicorn_default_pid
+        end
       end
     }
   end
@@ -66,7 +72,7 @@ namespace :unicorn do
         unicorn_bin        #{fetch :unicorn_bin}
         unicorn_options    #{fetch :unicorn_options}
         unicorn_restart_sleep_time  #{fetch :unicorn_restart_sleep_time}
-  
+
         # Relative paths
         app_subdir                         #{fetch :app_subdir}
         unicorn_config_rel_path            #{fetch :unicorn_config_rel_path}
@@ -92,21 +98,21 @@ namespace :unicorn do
       execute start_unicorn
     end
   end
-  
+
   desc 'Stop Unicorn'
   task :stop do
     on roles unicorn_roles, :except => {:no_release => true} do
       execute kill_unicorn('QUIT')
     end
   end
-  
+
   desc 'Immediately shutdown Unicorn'
   task :shutdown do
     on roles unicorn_roles, :except => {:no_release => true} do
       execute kill_unicorn('TERM')
     end
   end
-  
+
   desc 'Restart Unicorn'
   task :restart do
     on roles unicorn_roles, :except => {:no_release => true} do
@@ -122,7 +128,7 @@ namespace :unicorn do
       execute duplicate_unicorn()
     end
   end
-  
+
   desc 'Reload Unicorn'
   task :reload do
     on roles unicorn_roles, :except => {:no_release => true} do
